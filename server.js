@@ -14,170 +14,7 @@ const collectionName = 'ev_details';
 const client = new MongoClient(dbUrl);
 client.connect();
 
-wss.on('connection', (ws) => {
-    console.log('WebSocket connected');
-
-    global.ID = '';
-
-    // Connect to MongoDB and fetch data
-    MongoClient.connect(dbUrl)
-        .then((client) => {
-            const db = client.db(dbName);
-            const collection = db.collection(collectionName);
-
-            return collection.find({}).toArray();
-        })
-        .then((deviceDocs) => {
-            deviceDocs.forEach((deviceDoc) => {
-                ID = deviceDoc.yourField;
-                const deviceID = '/OCPPJ/' + ID;
-                deviceToWebSocketMap.set(deviceID, ws);
-            });
-
-            console.log('WebSocket clients stored in map for all devices');
-        })
-        .catch((err) => {
-            console.error('Error connecting to MongoDB or fetching data:', err);
-        });
-
-    ws.on('message', async (message) => {
-        const currentDate = new Date();
-        const formattedDate = currentDate.toISOString();
-
-        if (typeof message === 'object') {
-            try {
-                const requestData = JSON.parse(message);
-                console.log('WebSocket connected' + message);
-
-                const parsedMessage = JSON.parse(message);
-
-                if (Array.isArray(requestData) && requestData.length >= 4) {
-                    const requestType = requestData[0];
-                    const uniqueIdentifier = requestData[1];
-                    const requestName = requestData[2];
-                    const additionalData = requestData[3];
-
-                    if (requestType === 2 && requestName === "BootNotification") {
-                        console.log(`Received BootNotification request with unique identifier: ${uniqueIdentifier}`);
-                        const response = [3, uniqueIdentifier, {
-                            "status": "Accepted",
-                            "currentTime": new Date().toISOString(),
-                            "interval": 14400
-                        }];
-                        ws.send(JSON.stringify(response));
-                    } else if (requestType === 2 && requestName === "StatusNotification") {
-                        const response = [3, "a6gs8797ewYM06", {}];
-                        ws.send(JSON.stringify(response));
-                        const status = parsedMessage[3].status;
-                        if (status != undefined) {
-                            const keyValPair = {};
-                            keyValPair.chargerID = ID;
-                            keyValPair.status = status;
-                            keyValPair.timestamp = new Date();
-                            const Chargerstatus = JSON.stringify(keyValPair);
-                            SaveChargerStatus(Chargerstatus);
-                            //console.log(Chargerstatus);
-                        }
-                    } else if (requestType === 2 && requestName === "Heartbeat") {
-                        const response = [3, "a6gs8797ewYM03", { "currentTime": formattedDate }];
-                        ws.send(JSON.stringify(response));
-                    } else if (requestType === 2 && requestName === "Authorize") {
-                        const response = [3, uniqueIdentifier, { "idTagInfo": { "status": "Accepted", "parentIdTag": "B4A63CDB" } }];
-                        ws.send(JSON.stringify(response));
-                    } else if (requestType === 2 && requestName === "StartTransaction") {
-                        const response = [3, uniqueIdentifier, { "transactionId": 1027020, "idTagInfo": { "status": "Accepted", "parentIdTag": "B4A63CDB" } }];
-                        ws.send(JSON.stringify(response));
-                    } else if (requestType === 2 && requestName === "MeterValues") {
-                        const response = [3, uniqueIdentifier, {}];
-                        ws.send(JSON.stringify(response));
-                        const meterValueArray = parsedMessage[3].meterValue[0].sampledValue;
-                        const keyValuePair = {};
-                        meterValueArray.forEach((sampledValue) => {
-                            const measurand = sampledValue.measurand;
-                            const value = sampledValue.value;
-                            keyValuePair[measurand] = value;
-                        });
-                        keyValuePair.chargerID = ID;
-                        const ChargerValue = JSON.stringify(keyValuePair);
-                        SaveChargerValue(ChargerValue);
-                        //console.log(ChargerValue);
-                    } else if (requestType === 2 && requestName === "StopTransaction") {
-                        const response = [3, uniqueIdentifier, {}];
-                        ws.send(JSON.stringify(response));
-                    }
-                }
-            } catch (error) {
-                console.error('Error parsing or processing the message:', error);
-            }
-        }
-    });
-});
-
-function SaveChargerStatus(chargerStatus) {
-
-    const db = client.db(dbName);
-    const collection = db.collection('ev_charger_status');
-    const ChargerStatus = JSON.parse(chargerStatus);
-
-    // Check if a document with the same chargerID already exists
-    collection.findOne({ chargerID: ChargerStatus.chargerID })
-        .then(existingDocument => {
-            if (existingDocument) {
-                // Update the existing document
-                collection.updateOne(
-                    { chargerID: ChargerStatus.chargerID },
-                    { $set: ChargerStatus }
-                )
-                    .then(result => {
-                        if (result) {
-                            console.log('Status updated');
-                        } else {
-                            console.log('Status not updated');
-                        }
-                    })
-                    .catch(error => {
-                        console.log(error);
-                    });
-            } else {
-                // Insert a new document
-                collection.insertOne(ChargerStatus)
-                    .then(result => {
-                        if (result) {
-                            console.log('Status inserted');
-                        } else {
-                            console.log('Status not inserted');
-                        }
-                    })
-                    .catch(error => {
-                        console.log(error);
-                    });
-            }
-        })
-        .catch(error => {
-            console.log(error);
-        });
-
-
-}
-
-function SaveChargerValue(ChargerValue) {
-
-    const db = client.db(dbName);
-    const collection = db.collection('ev_charger_values');
-
-    collection.insertOne(JSON.parse(ChargerValue))
-        .then(result => {
-            if (result) {
-                console.log('value inserted');
-            } else {
-                console.log('value not inserted');
-            }
-        })
-        .catch(error => {
-            console.log(error);
-        });
-
-}
+global.RECEIVED_ID = '';
 
 // Create an HTTP server
 const server = http.createServer((req, res) => {
@@ -290,11 +127,11 @@ const server = http.createServer((req, res) => {
 
     } else if (req.url.startsWith('/OCPPJ/')) {
 
+        RECEIVED_ID = req.url.split('/').pop();
         const db = client.db(dbName);
         const collection = db.collection(collectionName);
-        const DeviceID = req.url.split('/').pop();
 
-        collection.findOne({ yourField: DeviceID })
+        collection.findOne({ yourField: RECEIVED_ID })
             .then(result => {
                 if (result) {
                     wss.handleUpgrade(req, req.socket, Buffer.from([]), (ws) => {
@@ -325,6 +162,167 @@ const server = http.createServer((req, res) => {
     }
 
 });
+
+wss.on('connection', (ws) => {
+    console.log('WebSocket connected');
+
+    // Connect to MongoDB and fetch data
+    MongoClient.connect(dbUrl)
+        .then((client) => {
+            const db = client.db(dbName);
+            const collection = db.collection(collectionName);
+            return collection.find({}).toArray();
+        })
+        .then((deviceDocs) => {
+            deviceDocs.forEach((deviceDoc) => {
+                const deviceID = '/OCPPJ/' + deviceDoc.yourField;
+                deviceToWebSocketMap.set(deviceID, ws);
+            });
+
+            console.log('WebSocket clients stored in map for all devices');
+        })
+        .catch((err) => {
+            console.error('Error connecting to MongoDB or fetching data:', err);
+        });
+
+    ws.on('message', async (message) => {
+        const currentDate = new Date();
+        const formattedDate = currentDate.toISOString();
+
+        if (typeof message === 'object') {
+            try {
+                const requestData = JSON.parse(message);
+                console.log('WebSocket message' + message);
+
+                const parsedMessage = JSON.parse(message);
+
+                if (Array.isArray(requestData) && requestData.length >= 4) {
+                    const requestType = requestData[0];
+                    const uniqueIdentifier = requestData[1];
+                    const requestName = requestData[2];
+                    const additionalData = requestData[3];
+
+                    if (requestType === 2 && requestName === "BootNotification") {
+                        console.log(`Received BootNotification request with unique identifier: ${uniqueIdentifier}`);
+                        const response = [3, uniqueIdentifier, {
+                            "status": "Accepted",
+                            "currentTime": new Date().toISOString(),
+                            "interval": 14400
+                        }];
+                        ws.send(JSON.stringify(response));
+                    } else if (requestType === 2 && requestName === "StatusNotification") {
+                        const response = [3, "a6gs8797ewYM06", {}];
+                        ws.send(JSON.stringify(response));
+                        const status = parsedMessage[3].status;
+                        if (status != undefined) {
+                            const keyValPair = {};
+                            keyValPair.chargerID = RECEIVED_ID;
+                            keyValPair.status = status;
+                            keyValPair.timestamp = new Date();
+                            const Chargerstatus = JSON.stringify(keyValPair);
+                            SaveChargerStatus(Chargerstatus);
+                            //console.log(Chargerstatus);
+                        }
+                    } else if (requestType === 2 && requestName === "Heartbeat") {
+                        const response = [3, "a6gs8797ewYM03", { "currentTime": formattedDate }];
+                        ws.send(JSON.stringify(response));
+                    } else if (requestType === 2 && requestName === "Authorize") {
+                        const response = [3, uniqueIdentifier, { "idTagInfo": { "status": "Accepted", "parentIdTag": "B4A63CDB" } }];
+                        ws.send(JSON.stringify(response));
+                    } else if (requestType === 2 && requestName === "StartTransaction") {
+                        const response = [3, uniqueIdentifier, { "transactionId": 1027020, "idTagInfo": { "status": "Accepted", "parentIdTag": "B4A63CDB" } }];
+                        ws.send(JSON.stringify(response));
+                    } else if (requestType === 2 && requestName === "MeterValues") {
+                        const response = [3, uniqueIdentifier, {}];
+                        ws.send(JSON.stringify(response));
+                        const meterValueArray = parsedMessage[3].meterValue[0].sampledValue;
+                        const keyValuePair = {};
+                        meterValueArray.forEach((sampledValue) => {
+                            const measurand = sampledValue.measurand;
+                            const value = sampledValue.value;
+                            keyValuePair[measurand] = value;
+                        });
+                        keyValuePair.chargerID = RECEIVED_ID;
+                        const ChargerValue = JSON.stringify(keyValuePair);
+                        SaveChargerValue(ChargerValue);
+                        //console.log(ChargerValue);
+                    } else if (requestType === 2 && requestName === "StopTransaction") {
+                        const response = [3, uniqueIdentifier, {}];
+                        ws.send(JSON.stringify(response));
+                    }
+                }
+            } catch (error) {
+                console.error('Error parsing or processing the message:', error);
+            }
+        }
+    });
+});
+
+function SaveChargerStatus(chargerStatus) {
+
+    const db = client.db(dbName);
+    const collection = db.collection('ev_charger_status');
+    const ChargerStatus = JSON.parse(chargerStatus);
+    
+    // Check if a document with the same chargerID already exists
+    collection.findOne({ chargerID: ChargerStatus.chargerID })
+        .then(existingDocument => {
+            if (existingDocument) {
+                // Update the existing document
+                collection.updateOne(
+                    { chargerID: ChargerStatus.chargerID },
+                    { $set: ChargerStatus }
+                )
+                    .then(result => {
+                        if (result) {
+                            console.log('Status updated');
+                        } else {
+                            console.log('Status not updated');
+                        }
+                    })
+                    .catch(error => {
+                        console.log(error);
+                    });
+            } else {
+                // Insert a new document
+                collection.insertOne(ChargerStatus)
+                    .then(result => {
+                        if (result) {
+                            console.log('Status inserted');
+                        } else {
+                            console.log('Status not inserted');
+                        }
+                    })
+                    .catch(error => {
+                        console.log(error);
+                    });
+            }
+        })
+        .catch(error => {
+            console.log(error);
+        });
+
+
+}
+
+function SaveChargerValue(ChargerValue) {
+
+    const db = client.db(dbName);
+    const collection = db.collection('ev_charger_values');
+
+    collection.insertOne(JSON.parse(ChargerValue))
+        .then(result => {
+            if (result) {
+                console.log('value inserted');
+            } else {
+                console.log('value not inserted');
+            }
+        })
+        .catch(error => {
+            console.log(error);
+        });
+
+}
 
 server.listen(8050, () => {
     console.log('Server is running on port 8050');
