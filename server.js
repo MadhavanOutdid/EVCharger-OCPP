@@ -16,6 +16,44 @@ client.connect();
 
 global.RECEIVED_ID = '';
 
+async function connectWebSocket(ws) {
+    try {
+        console.log('WebSocket connected');
+
+        // Ping/Pong mechanism
+        const pingInterval = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.ping();
+            } else {
+                clearInterval(pingInterval);
+            }
+        }, 5000); // Ping every 30 seconds
+
+        const client = await MongoClient.connect(dbUrl);
+        console.log('Connected to MongoDB');
+
+        const db = client.db(dbName);
+        const collection = db.collection(collectionName);
+
+        const deviceDocs = await collection.find({}).toArray();
+        deviceDocs.forEach((deviceDoc) => {
+            const deviceID = '/OCPPJ/' + deviceDoc.yourField;
+            deviceToWebSocketMap.set(deviceID, ws);
+        });
+
+        console.log('WebSocket clients stored in map for all devices');
+    } catch (err) {
+        console.error('Error connecting to MongoDB or fetching data:', err);
+        // Implement additional error handling or reconnection logic here
+
+        // For example, you might attempt to reconnect after a delay
+        setTimeout(() => {
+            console.log('Attempting to reconnect WebSocket...');
+            connectWebSocket(ws);
+        }, 1000); // Retry after 5 seconds
+    }
+}
+
 // Create an HTTP server
 const server = http.createServer((req, res) => {
 
@@ -164,26 +202,25 @@ const server = http.createServer((req, res) => {
 });
 
 wss.on('connection', (ws) => {
-    console.log('WebSocket connected');
+   
+    // Handle WebSocket closure
+    ws.on('close', (code, reason) => {
+        if (code === 1000) {
+            console.log('WebSocket closed gracefully');
+        } else {
+            console.log(`WebSocket closed unexpectedly with code ${code} and reason: ${reason}`);
+            // Implement reconnection logic for unexpected closures
+            setTimeout(() => {
+                console.log('Attempting to reconnect WebSocket...');
+                connectWebSocket(ws);
+            }, 1000); // Retry after 5 seconds
+        }
+    });
 
-    // Connect to MongoDB and fetch data
-    MongoClient.connect(dbUrl)
-        .then((client) => {
-            const db = client.db(dbName);
-            const collection = db.collection(collectionName);
-            return collection.find({}).toArray();
-        })
-        .then((deviceDocs) => {
-            deviceDocs.forEach((deviceDoc) => {
-                const deviceID = '/OCPPJ/' + deviceDoc.yourField;
-                deviceToWebSocketMap.set(deviceID, ws);
-            });
-
-            console.log('WebSocket clients stored in map for all devices');
-        })
-        .catch((err) => {
-            console.error('Error connecting to MongoDB or fetching data:', err);
-        });
+    // Ping/Pong mechanism
+    setInterval(() => {
+        ws.ping();
+    }, 30000); // Ping every 30 seconds
 
     ws.on('message', async (message) => {
         const currentDate = new Date();
@@ -256,6 +293,9 @@ wss.on('connection', (ws) => {
             }
         }
     });
+
+    connectWebSocket(ws);
+
 });
 
 function SaveChargerStatus(chargerStatus) {
