@@ -6,6 +6,8 @@ const url = require('url');
 
 const wss = new WebSocket.Server({ noServer: true });
 const deviceToWebSocketMap = new Map();
+// Data structure to store source IP addresses
+const clients = new Map();
 
 const dbUrl = 'mongodb://127.0.0.1:27017/';
 const dbName = 'ev';
@@ -19,15 +21,6 @@ global.RECEIVED_ID = '';
 async function connectWebSocket(ws) {
     try {
         console.log('WebSocket connected');
-
-        // Ping/Pong mechanism
-        const pingInterval = setInterval(() => {
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.ping();
-            } else {
-                clearInterval(pingInterval);
-            }
-        }, 5000); // Ping every 30 seconds
 
         const client = await MongoClient.connect(dbUrl);
         console.log('Connected to MongoDB');
@@ -44,13 +37,6 @@ async function connectWebSocket(ws) {
         console.log('WebSocket clients stored in map for all devices');
     } catch (err) {
         console.error('Error connecting to MongoDB or fetching data:', err);
-        // Implement additional error handling or reconnection logic here
-
-        // For example, you might attempt to reconnect after a delay
-        setTimeout(() => {
-            console.log('Attempting to reconnect WebSocket...');
-            connectWebSocket(ws);
-        }, 1000); // Retry after 5 seconds
     }
 }
 
@@ -177,7 +163,7 @@ const server = http.createServer((req, res) => {
                     });
                 } else {
                     res.writeHead(404);
-                    console.log("Device not Found");
+                    console.log("Device not available in database");
                 }
             })
             .catch(error => {
@@ -201,12 +187,37 @@ const server = http.createServer((req, res) => {
 
 });
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws,req) => {
+
+    const clientIpAddress = req.connection.remoteAddress;
+    console.log(`${clientIpAddress} & ${RECEIVED_ID}`);
+
+    const db = client.db(dbName);
+
+    // Create a query to match the documents
+    const query = { yourField: RECEIVED_ID };
+
+    // Create an update operation to set the IP address
+    const updateOperation = { $set: { ip: clientIpAddress } };
+
+    // Update a single document
+    db.collection('ev_details').updateOne(query, updateOperation, function (err, result) {
+    if (err) throw err;
+        console.log(`Matched ${result.matchedCount} document(s) and modified ${result.modifiedCount} document(s)`);
+    });
+
+    db.collection('ev_charger_status').updateOne({ chargerID: RECEIVED_ID}, { $set: { clientIP: clientIpAddress }}, function (err, result) {
+    if (err) throw err;
+        console.log(`Matched ${result.matchedCount} document(s) and modified ${result.modifiedCount} document(s)`);
+    });
+
+    // Store the source IP address associated with the WebSocket connection
+    clients.set(ws, clientIpAddress);
    
     // Handle WebSocket closure
     ws.on('close', (code, reason) => {
         if (code === 1000) {
-            console.log('WebSocket closed gracefully');
+            console.log('WebSocket closed');
         } else {
             console.log(`WebSocket closed unexpectedly with code ${code} and reason: ${reason}`);
             // Implement reconnection logic for unexpected closures
@@ -217,11 +228,6 @@ wss.on('connection', (ws) => {
         }
     });
 
-    // Ping/Pong mechanism
-    setInterval(() => {
-        ws.ping();
-    }, 30000); // Ping every 30 seconds
-
     ws.on('message', async (message) => {
         const currentDate = new Date();
         const formattedDate = currentDate.toISOString();
@@ -229,7 +235,10 @@ wss.on('connection', (ws) => {
         if (typeof message === 'object') {
             try {
                 const requestData = JSON.parse(message);
-                console.log('WebSocket message' + message);
+                //console.log('WebSocket message' + message);
+
+                const sourceIP = clients.get(ws);
+                console.log(`Received message from client with IP ${sourceIP}: ${message}`);
 
                 const parsedMessage = JSON.parse(message);
 
@@ -253,9 +262,9 @@ wss.on('connection', (ws) => {
                         const status = parsedMessage[3].status;
                         if (status != undefined) {
                             const keyValPair = {};
-                            keyValPair.chargerID = RECEIVED_ID;
                             keyValPair.status = status;
                             keyValPair.timestamp = new Date();
+                            keyValPair.clientIP = clientIpAddress;
                             const Chargerstatus = JSON.stringify(keyValPair);
                             SaveChargerStatus(Chargerstatus);
                             //console.log(Chargerstatus);
@@ -279,10 +288,9 @@ wss.on('connection', (ws) => {
                             const value = sampledValue.value;
                             keyValuePair[measurand] = value;
                         });
-                        keyValuePair.chargerID = RECEIVED_ID;
+                        keyValuePair.clientIP = clientIpAddress;
                         const ChargerValue = JSON.stringify(keyValuePair);
                         SaveChargerValue(ChargerValue);
-                        //console.log(ChargerValue);
                     } else if (requestType === 2 && requestName === "StopTransaction") {
                         const response = [3, uniqueIdentifier, {}];
                         ws.send(JSON.stringify(response));
@@ -303,15 +311,15 @@ function SaveChargerStatus(chargerStatus) {
     const db = client.db(dbName);
     const collection = db.collection('ev_charger_status');
     const ChargerStatus = JSON.parse(chargerStatus);
-    
+
     // Check if a document with the same chargerID already exists
-    collection.findOne({ chargerID: ChargerStatus.chargerID })
+    collection.findOne({ clientIP: ChargerStatus.clientIP})
         .then(existingDocument => {
             if (existingDocument) {
                 // Update the existing document
                 collection.updateOne(
-                    { chargerID: ChargerStatus.chargerID },
-                    { $set: ChargerStatus }
+                    { clientIP: ChargerStatus.clientIP },
+                    { $set: {status: ChargerStatus.status, timestamp: ChargerStatus.timestamp} }
                 )
                     .then(result => {
                         if (result) {
@@ -323,9 +331,18 @@ function SaveChargerStatus(chargerStatus) {
                     .catch(error => {
                         console.log(error);
                     });
+                
+                
             } else {
-                // Insert a new document
-                collection.insertOne(ChargerStatus)
+
+                db.collection('ev_details').findOne({ ip: ChargerStatus.clientIP })
+                .then(foundDocument => {
+                  if (foundDocument) {
+                    ChargerStatus.chargerID = foundDocument.yourField;
+
+                    console.log(ChargerStatus);
+
+                    collection.insertOne(ChargerStatus)
                     .then(result => {
                         if (result) {
                             console.log('Status inserted');
@@ -336,21 +353,30 @@ function SaveChargerStatus(chargerStatus) {
                     .catch(error => {
                         console.log(error);
                     });
+
+                  } else {
+                    console.log('Document not found');
+                  }
+                })
             }
         })
         .catch(error => {
             console.log(error);
         });
-
-
 }
 
-function SaveChargerValue(ChargerValue) {
+function SaveChargerValue(ChargerVal) {
+
 
     const db = client.db(dbName);
     const collection = db.collection('ev_charger_values');
+    const ChargerValue = JSON.parse(ChargerVal);
 
-    collection.insertOne(JSON.parse(ChargerValue))
+    db.collection('ev_details').findOne({ ip: ChargerValue.clientIP })
+    .then(foundDocument => {
+        if (foundDocument) {
+        ChargerValue.chargerID = foundDocument.yourField; // Assuming yourField is the correct field name
+        collection.insertOne(ChargerValue)
         .then(result => {
             if (result) {
                 console.log('value inserted');
@@ -361,6 +387,11 @@ function SaveChargerValue(ChargerValue) {
         .catch(error => {
             console.log(error);
         });
+        } else {
+        console.log('Value not available');
+        return Promise.resolve(null);
+        }
+    })
 
 }
 
