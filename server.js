@@ -5,9 +5,8 @@ const fs = require('fs');
 const url = require('url');
 
 const wss = new WebSocket.Server({ noServer: true });
-const deviceToWebSocketMap = new Map();
-// Data structure to store source IP addresses
 const clients = new Map();
+const wsConnections = new Map();
 
 const dbUrl = 'mongodb://127.0.0.1:27017/';
 const dbName = 'ev';
@@ -16,29 +15,48 @@ const collectionName = 'ev_details';
 const client = new MongoClient(dbUrl);
 client.connect();
 
-global.RECEIVED_ID = '';
+// Function to extract the unique identifier from the request
+const getUniqueIdentifierFromRequest = (request) => {
+    return request.url.split('/').pop();
+};
 
-async function connectWebSocket(ws) {
-    try {
-        console.log('WebSocket connected');
+// Function to handle WebSocket upgrade
+const handleWebSocketUpgrade = (request, socket, head) => {
+    const uniqueIdentifier = getUniqueIdentifierFromRequest(request);
 
-        const client = await MongoClient.connect(dbUrl);
-        console.log('Connected to MongoDB');
-
-        const db = client.db(dbName);
-        const collection = db.collection(collectionName);
-
-        const deviceDocs = await collection.find({}).toArray();
-        deviceDocs.forEach((deviceDoc) => {
-            const deviceID = '/OCPPJ/' + deviceDoc.yourField;
-            deviceToWebSocketMap.set(deviceID, ws);
-        });
-
-        console.log('WebSocket clients stored in map for all devices');
-    } catch (err) {
-        console.error('Error connecting to MongoDB or fetching data:', err);
+    if (!uniqueIdentifier) {
+        console.error('WebSocket upgrade failed due to missing unique identifier.');
+        socket.destroy();
+        return;
     }
-}
+
+    wss.handleUpgrade (request, socket, head, async(ws) => {       
+        wsConnections.set(uniqueIdentifier, ws);
+        wss.emit('connection', ws, request);
+    });
+};
+
+// async function checkDeviceID(id) {
+//     try {
+//         console.log('WebSocket connected');
+
+//         const client = await MongoClient.connect(dbUrl);
+//         console.log('Connected to MongoDB');
+
+//         const db = client.db(dbName);
+//         const collection = db.collection(collectionName);
+
+//         // const deviceDocs = await collection.find({}).toArray();
+//         // deviceDocs.forEach((deviceDoc) => {
+//         //     const deviceID = '/OCPPJ/' + deviceDoc.yourField;
+//         //     wsConnections.set(deviceID, ws);
+//         // });
+
+//         console.log('WebSocket clients stored in map for all devices');
+//     } catch (err) {
+//         console.error('Error connecting to MongoDB or fetching data:', err);
+//     }
+// }
 
 // Create an HTTP server
 const server = http.createServer((req, res) => {
@@ -100,9 +118,8 @@ const server = http.createServer((req, res) => {
         const queryParams = parsedUrl.query;
         const id = queryParams.id;
 
-        const deviceIDToSendTo = '/OCPPJ/' + id; // Specify the device ID you want to send the message to
-        const wsToSendTo = deviceToWebSocketMap.get(deviceIDToSendTo);
-        //console.log(wsToSendTo);
+        const deviceIDToSendTo = id; // Specify the device ID you want to send the message to
+        const wsToSendTo = wsConnections.get(deviceIDToSendTo);
 
         if (wsToSendTo) {
             const remoteStartRequest = [2, "1695798668459", "RemoteStartTransaction", {
@@ -116,12 +133,12 @@ const server = http.createServer((req, res) => {
             wsToSendTo.send(JSON.stringify(remoteStartRequest));
             // OK status
             console.log('Message sent to the WebSocket client for device ID:', deviceIDToSendTo);
-            res.statusCode = 200; 
+            res.statusCode = 200;
             res.end('Message sent to the WebSocket client for device ID: ' + deviceIDToSendTo);
         } else {
             // Charger ID Not Found/Available
             console.log('WebSocket client not found for the specified device ID:', deviceIDToSendTo);
-            res.statusCode = 404; 
+            res.statusCode = 404;
             res.end('WebSocket client not found for the specified device ID: ' + deviceIDToSendTo);
         }
 
@@ -130,45 +147,34 @@ const server = http.createServer((req, res) => {
         const parsedUrl = url.parse(req.url, true);
         const queryParams = parsedUrl.query;
         const id = queryParams.id;
-
-        const deviceIDToSendTo = '/OCPPJ/' + id; // Specify the device ID you want to send the message to
-        const wsToSendTo = deviceToWebSocketMap.get(deviceIDToSendTo);
-
-        if (wsToSendTo) {
-            const remoteStopRequest = [2, "1695798668459", "RemoteStopTransaction", { "transactionId": 1027020 }];
-            wsToSendTo.send(JSON.stringify(remoteStopRequest));
-
-            // OK status
-            console.log('Message sent to the WebSocket client for device ID:', deviceIDToSendTo);
-            res.statusCode = 200;
-            res.end('Message sent to the WebSocket client for device ID: ' + deviceIDToSendTo);
+        
+        // Specify the device ID you want to send the message to
+        const deviceIDToSendTo = id;
+        const transData =  client.db(dbName).collection('ev_details').findOne({ yourField: id });
+        
+        if (transData) {
+            const wsToSendTo = wsConnections.get(deviceIDToSendTo);
+        
+            if (wsToSendTo) {
+                const transId = transData.transactionId;
+                const remoteStopRequest = [2, "1695798668459", "RemoteStopTransaction", { "transactionId": 1027021 }];
+                wsToSendTo.send(JSON.stringify(remoteStopRequest));
+        
+                // OK status
+                console.log('Message sent to the WebSocket client for device ID:', deviceIDToSendTo);
+                res.statusCode = 200;
+                res.end('Message sent to the WebSocket client for device ID: ' + deviceIDToSendTo);
+            } else {
+                console.log('WebSocket client not found for the specified device ID:', deviceIDToSendTo);
+                res.statusCode = 404;
+                res.end('WebSocket client not found for the specified device ID: ' + deviceIDToSendTo);
+            }
         } else {
-            // Charger ID Not Found/Available
-            console.log('WebSocket client not found for the specified device ID:', deviceIDToSendTo);
+            console.log('Transaction ID not set or not available!');
             res.statusCode = 400;
-            res.end('WebSocket client not found for the specified device ID: ' + deviceIDToSendTo);
+            res.end('Transaction ID not set or not available for the specified device ID: ' + deviceIDToSendTo);
         }
-
-    } else if (req.url.startsWith('/OCPPJ/')) {
-
-        RECEIVED_ID = req.url.split('/').pop();
-        const db = client.db(dbName);
-        const collection = db.collection(collectionName);
-
-        collection.findOne({ yourField: RECEIVED_ID })
-            .then(result => {
-                if (result) {
-                    wss.handleUpgrade(req, req.socket, Buffer.from([]), (ws) => {
-                        wss.emit('connection', ws, req);
-                    });
-                } else {
-                    res.writeHead(404);
-                    console.log("Device not available in database");
-                }
-            })
-            .catch(error => {
-                console.log(error);
-            });
+        
 
     } else if (req.method === 'GET' && req.url === '/') { // Serve index.html for the root path
         fs.readFile('./public/index.html', 'utf8', (err, data) => {
@@ -190,43 +196,31 @@ const server = http.createServer((req, res) => {
 wss.on('connection', (ws,req) => {
 
     const clientIpAddress = req.connection.remoteAddress;
-    console.log(`${clientIpAddress} & ${RECEIVED_ID}`);
+
+    const uniqueIdentifier = getUniqueIdentifierFromRequest(req);
+    console.log(`Websocket Connected to ${uniqueIdentifier}`);
+    wsConnections.set(uniqueIdentifier, ws);
 
     const db = client.db(dbName);
-
-    // Create a query to match the documents
-    const query = { yourField: RECEIVED_ID };
-
-    // Create an update operation to set the IP address
+    const query = { yourField: uniqueIdentifier };
     const updateOperation = { $set: { ip: clientIpAddress } };
 
-    // Update a single document
-    db.collection('ev_details').updateOne(query, updateOperation, function (err, result) {
-    if (err) throw err;
+    db.collection('ev_details')
+    .updateOne(query, updateOperation)
+    .then(result => {
         console.log(`Matched ${result.matchedCount} document(s) and modified ${result.modifiedCount} document(s)`);
+    })
+    .catch(err => {
+        console.error('Error updating document:', err);
     });
 
-    db.collection('ev_charger_status').updateOne({ chargerID: RECEIVED_ID}, { $set: { clientIP: clientIpAddress }}, function (err, result) {
+    db.collection('ev_charger_status').updateOne({ chargerID: uniqueIdentifier}, { $set: { clientIP: clientIpAddress }}, function (err, result) {
     if (err) throw err;
         console.log(`Matched ${result.matchedCount} document(s) and modified ${result.modifiedCount} document(s)`);
     });
 
     // Store the source IP address associated with the WebSocket connection
     clients.set(ws, clientIpAddress);
-   
-    // Handle WebSocket closure
-    ws.on('close', (code, reason) => {
-        if (code === 1000) {
-            console.log('WebSocket closed');
-        } else {
-            console.log(`WebSocket closed unexpectedly with code ${code} and reason: ${reason}`);
-            // Implement reconnection logic for unexpected closures
-            setTimeout(() => {
-                console.log('Attempting to reconnect WebSocket...');
-                connectWebSocket(ws);
-            }, 1000); // Retry after 5 seconds
-        }
-    });
 
     ws.on('message', async (message) => {
         const currentDate = new Date();
@@ -235,10 +229,9 @@ wss.on('connection', (ws,req) => {
         if (typeof message === 'object') {
             try {
                 const requestData = JSON.parse(message);
-                //console.log('WebSocket message' + message);
 
                 const sourceIP = clients.get(ws);
-                console.log(`Received message from client with IP ${sourceIP}: ${message}`);
+                console.log(`Received message from DeviceID ${uniqueIdentifier}: ${message}`);
 
                 const parsedMessage = JSON.parse(message);
 
@@ -246,7 +239,6 @@ wss.on('connection', (ws,req) => {
                     const requestType = requestData[0];
                     const uniqueIdentifier = requestData[1];
                     const requestName = requestData[2];
-                    const additionalData = requestData[3];
 
                     if (requestType === 2 && requestName === "BootNotification") {
                         console.log(`Received BootNotification request with unique identifier: ${uniqueIdentifier}`);
@@ -267,7 +259,6 @@ wss.on('connection', (ws,req) => {
                             keyValPair.clientIP = clientIpAddress;
                             const Chargerstatus = JSON.stringify(keyValPair);
                             SaveChargerStatus(Chargerstatus);
-                            //console.log(Chargerstatus);
                         }
                     } else if (requestType === 2 && requestName === "Heartbeat") {
                         const response = [3, "a6gs8797ewYM03", { "currentTime": formattedDate }];
@@ -276,8 +267,20 @@ wss.on('connection', (ws,req) => {
                         const response = [3, uniqueIdentifier, { "idTagInfo": { "status": "Accepted", "parentIdTag": "B4A63CDB" } }];
                         ws.send(JSON.stringify(response));
                     } else if (requestType === 2 && requestName === "StartTransaction") {
-                        const response = [3, uniqueIdentifier, { "transactionId": 1027020, "idTagInfo": { "status": "Accepted", "parentIdTag": "B4A63CDB" } }];
-                        ws.send(JSON.stringify(response));
+                        let transId;
+                        db.collection('ev_details').findOne({ ip: clientIpAddress })
+                        .then(transData => {
+                            if (transData) {
+                            transId = transData.transactionId;
+                            const response = [3, uniqueIdentifier, { "transactionId": 1027021, "idTagInfo": { "status": "Accepted", "parentIdTag": "B4A63CDB" } }];
+                            ws.send(JSON.stringify(response));
+                            } else {
+                            console.log('Transaction ID not set or not available !');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error executing findOne:', error);
+                        });
                     } else if (requestType === 2 && requestName === "MeterValues") {
                         const response = [3, uniqueIdentifier, {}];
                         ws.send(JSON.stringify(response));
@@ -302,9 +305,57 @@ wss.on('connection', (ws,req) => {
         }
     });
 
-    connectWebSocket(ws);
+    ws.on('close', (code, reason) => {
+        console.log(`WebSocket closed with code ${code} and reason: ${reason}`);
+    });
+
+    ws.on('error', (error) => {
+        console.error(`WebSocket error: ${error.message}`);
+    });
 
 });
+
+// Handle upgrades on the server
+server.on('upgrade', async(request, socket, head) => {
+    try {
+        // Extract information from the request or any other relevant source
+        const uniqueIdentifier = getUniqueIdentifierFromRequest(request);
+
+        if (!uniqueIdentifier) {
+            console.error('WebSocket upgrade failed due to missing unique identifier.');
+            socket.destroy();
+            return;
+        }
+
+        if (await shouldUpgradeForDevice(uniqueIdentifier)) {
+            handleWebSocketUpgrade(request, socket, head);
+        } else {
+            console.log('WebSocket upgrade not allowed for the specified device:', uniqueIdentifier);
+            socket.destroy();
+        }
+
+    } catch (error) {
+        console.error('Error handling WebSocket upgrade:', error);
+        socket.destroy();
+    }
+});
+
+async function shouldUpgradeForDevice(uniqueIdentifier) {
+    try {
+        const db = client.db(dbName);
+        const collection = db.collection('ev_details');
+
+        const allDevices = await collection.find({}).toArray();
+        const allDeviceIds = allDevices.map(device => device.yourField.toString());
+
+        // Check if the provided uniqueIdentifier is in the list of IDs
+        return allDeviceIds.includes(uniqueIdentifier);
+    } catch (error) {
+        console.error('Error checking device existence:', error);
+        return false; // Default to disallowing the upgrade in case of an error
+    }
+}
+
 
 function SaveChargerStatus(chargerStatus) {
 
@@ -331,16 +382,14 @@ function SaveChargerStatus(chargerStatus) {
                     .catch(error => {
                         console.log(error);
                     });
-                
-                
+              
+              
             } else {
 
                 db.collection('ev_details').findOne({ ip: ChargerStatus.clientIP })
                 .then(foundDocument => {
                   if (foundDocument) {
                     ChargerStatus.chargerID = foundDocument.yourField;
-
-                    console.log(ChargerStatus);
 
                     collection.insertOne(ChargerStatus)
                     .then(result => {
