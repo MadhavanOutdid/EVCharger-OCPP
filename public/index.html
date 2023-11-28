@@ -63,6 +63,7 @@
 
 var chargerURL = '';
 var isChargerAvailabe = '';
+let intervalId;
 
 $(document).ready(function () {
     $('#actionBtn').hide();
@@ -86,16 +87,25 @@ $('#chargerSUBMIT').click(function () {
 function CallInterval(isChargerAvailabe){
   if(isChargerAvailabe == true){
     var interval = 1000; // 1 seconds
-    setInterval(fetchData, interval);
+    intervalId = setInterval(getChargerDetails, interval);
   }else{
     console.log('setInterval is not working !');
   }
 }
 
 function fetchData(callback) {
-    var chargerID = $('#chargerID').val();
+    getChargerDetails(function(result) {
+      if(result){
+        if (callback) {
+          callback(true);
+        }
+      }
+    });
+}
 
-    $.ajax({
+function getChargerDetails(callback){
+  var chargerID = $('#chargerID').val();
+  $.ajax({
         type: 'GET',
         data: { chargerID: chargerID },
         url: '/checkDeviceID',
@@ -104,9 +114,12 @@ function fetchData(callback) {
             $('#voltage, #current, #power, #energy, #frequency, #temperature').empty();
 
             if (response == 'DeviceNotAvailable') {
+              if($('#chargerID').val().trim() !== ''){
                 console.log('ChargerNotAvailable');
+              }               
                 $('#actionBtn').hide();
                 $('#ChargerValue').hide();
+                clearInterval(intervalId);
             } else {
                 chargerURL = chargerID;
 
@@ -145,6 +158,16 @@ function fetchData(callback) {
     });
 }
 
+// Event listener to check the text box value and start/stop the interval
+document.getElementById('chargerID').addEventListener('input', function() {
+    const textBoxValue = this.value;
+
+    if (textBoxValue.trim() === '') {
+        // If the text box is empty, stop the interval
+        clearInterval(intervalId);
+    }
+});
+
 function formatTimestamp(originalTimestamp) {
 
     const date = new Date(originalTimestamp);
@@ -169,7 +192,7 @@ startTransactionBtn.addEventListener('click', function () {
         data: { id: chargerURL },
         success: function (data, textStatus, jqXHR) {
             if (jqXHR.status === 200) {
-                console.log("OK - ChargerStarted");
+                console.log("OK - ChargerStartInitiated");
             }
         },
         error: function(error){
@@ -186,7 +209,7 @@ stopTransactionBtn.addEventListener('click', function () {
         data: { id: chargerURL },
         success: function (data, textStatus, jqXHR) {
             if (jqXHR.status === 200) {
-                console.log("OK - ChargerStopped");
+                console.log("OK - ChargerStopInitiated");
             }
         },
         error: function(error){

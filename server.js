@@ -36,28 +36,6 @@ const handleWebSocketUpgrade = (request, socket, head) => {
     });
 };
 
-// async function checkDeviceID(id) {
-//     try {
-//         console.log('WebSocket connected');
-
-//         const client = await MongoClient.connect(dbUrl);
-//         console.log('Connected to MongoDB');
-
-//         const db = client.db(dbName);
-//         const collection = db.collection(collectionName);
-
-//         // const deviceDocs = await collection.find({}).toArray();
-//         // deviceDocs.forEach((deviceDoc) => {
-//         //     const deviceID = '/OCPPJ/' + deviceDoc.yourField;
-//         //     wsConnections.set(deviceID, ws);
-//         // });
-
-//         console.log('WebSocket clients stored in map for all devices');
-//     } catch (err) {
-//         console.error('Error connecting to MongoDB or fetching data:', err);
-//     }
-// }
-
 // Create an HTTP server
 const server = http.createServer((req, res) => {
 
@@ -150,33 +128,61 @@ const server = http.createServer((req, res) => {
         
         // Specify the device ID you want to send the message to
         const deviceIDToSendTo = id;
-        const transData =  client.db(dbName).collection('ev_details').findOne({ yourField: id });
-        
-        if (transData) {
-            const wsToSendTo = wsConnections.get(deviceIDToSendTo);
-        
-            if (wsToSendTo) {
-                const transId = transData.transactionId;
-                const remoteStopRequest = [2, "1695798668459", "RemoteStopTransaction", { "transactionId": 1027021 }];
-                wsToSendTo.send(JSON.stringify(remoteStopRequest));
-        
-                // OK status
-                console.log('Message sent to the WebSocket client for device ID:', deviceIDToSendTo);
-                res.statusCode = 200;
-                res.end('Message sent to the WebSocket client for device ID: ' + deviceIDToSendTo);
+
+        client.db(dbName).collection('ev_details').findOne({ yourField: deviceIDToSendTo })
+        .then(transData => {
+            if (transData) {
+                const wsToSendTo = wsConnections.get(deviceIDToSendTo);
+                if (wsToSendTo) {
+                    const transId = transData.transactionId;
+                    const remoteStopRequest = [2, "1695798668459", "RemoteStopTransaction", { "transactionId": transId }];
+                    wsToSendTo.send(JSON.stringify(remoteStopRequest));
+            
+                    // OK status
+                    console.log('Message sent to the WebSocket client for device ID:', deviceIDToSendTo);
+                    res.statusCode = 200;
+                    res.end('Message sent to the WebSocket client for device ID: ' + deviceIDToSendTo);
+                } else {
+                    console.log('WebSocket client not found for the specified device ID:', deviceIDToSendTo);
+                    res.statusCode = 404;
+                    res.end('WebSocket client not found for the specified device ID: ' + deviceIDToSendTo);
+                }
             } else {
-                console.log('WebSocket client not found for the specified device ID:', deviceIDToSendTo);
-                res.statusCode = 404;
-                res.end('WebSocket client not found for the specified device ID: ' + deviceIDToSendTo);
+                console.log('Transaction ID not set or not available !');
             }
-        } else {
+        })
+        .catch(error => {
             console.log('Transaction ID not set or not available!');
             res.statusCode = 400;
             res.end('Transaction ID not set or not available for the specified device ID: ' + deviceIDToSendTo);
-        }
+        });
+        
+        // if (transData) {
+        //     const wsToSendTo = wsConnections.get(deviceIDToSendTo);
+        
+        //     if (wsToSendTo) {
+        //         const transId = transData.transactionId;
+        //         console.log(transData.transactionId);
+        //         const remoteStopRequest = [2, "1695798668459", "RemoteStopTransaction", { "transactionId": transData.transactionId }];
+        //         wsToSendTo.send(JSON.stringify(remoteStopRequest));
+        
+        //         // OK status
+        //         console.log('Message sent to the WebSocket client for device ID:', deviceIDToSendTo);
+        //         res.statusCode = 200;
+        //         res.end('Message sent to the WebSocket client for device ID: ' + deviceIDToSendTo);
+        //     } else {
+        //         console.log('WebSocket client not found for the specified device ID:', deviceIDToSendTo);
+        //         res.statusCode = 404;
+        //         res.end('WebSocket client not found for the specified device ID: ' + deviceIDToSendTo);
+        //     }
+        // } else {
+        //     console.log('Transaction ID not set or not available!');
+        //     res.statusCode = 400;
+        //     res.end('Transaction ID not set or not available for the specified device ID: ' + deviceIDToSendTo);
+        // }
         
 
-    } else if (req.method === 'GET' && req.url === '/') { // Serve index.html for the root path
+    } else if (req.method === 'GET' && req.url === '/') { 
         fs.readFile('./public/index.html', 'utf8', (err, data) => {
             if (err) {
                 res.writeHead(500);
@@ -237,12 +243,12 @@ wss.on('connection', (ws,req) => {
 
                 if (Array.isArray(requestData) && requestData.length >= 4) {
                     const requestType = requestData[0];
-                    const uniqueIdentifier = requestData[1];
+                    const Identifier = requestData[1];
                     const requestName = requestData[2];
 
                     if (requestType === 2 && requestName === "BootNotification") {
-                        console.log(`Received BootNotification request with unique identifier: ${uniqueIdentifier}`);
-                        const response = [3, uniqueIdentifier, {
+                        console.log(`Received BootNotification request with unique identifier: ${Identifier}`);
+                        const response = [3, Identifier, {
                             "status": "Accepted",
                             "currentTime": new Date().toISOString(),
                             "interval": 14400
@@ -263,8 +269,9 @@ wss.on('connection', (ws,req) => {
                     } else if (requestType === 2 && requestName === "Heartbeat") {
                         const response = [3, "a6gs8797ewYM03", { "currentTime": formattedDate }];
                         ws.send(JSON.stringify(response));
+                        updateTime(uniqueIdentifier);
                     } else if (requestType === 2 && requestName === "Authorize") {
-                        const response = [3, uniqueIdentifier, { "idTagInfo": { "status": "Accepted", "parentIdTag": "B4A63CDB" } }];
+                        const response = [3, Identifier, { "idTagInfo": { "status": "Accepted", "parentIdTag": "B4A63CDB" } }];
                         ws.send(JSON.stringify(response));
                     } else if (requestType === 2 && requestName === "StartTransaction") {
                         let transId;
@@ -272,7 +279,7 @@ wss.on('connection', (ws,req) => {
                         .then(transData => {
                             if (transData) {
                             transId = transData.transactionId;
-                            const response = [3, uniqueIdentifier, { "transactionId": 1027021, "idTagInfo": { "status": "Accepted", "parentIdTag": "B4A63CDB" } }];
+                            const response = [3, Identifier, { "transactionId": transId, "idTagInfo": { "status": "Accepted", "parentIdTag": "B4A63CDB" } }];
                             ws.send(JSON.stringify(response));
                             } else {
                             console.log('Transaction ID not set or not available !');
@@ -282,7 +289,7 @@ wss.on('connection', (ws,req) => {
                             console.error('Error executing findOne:', error);
                         });
                     } else if (requestType === 2 && requestName === "MeterValues") {
-                        const response = [3, uniqueIdentifier, {}];
+                        const response = [3, Identifier, {}];
                         ws.send(JSON.stringify(response));
                         const meterValueArray = parsedMessage[3].meterValue[0].sampledValue;
                         const keyValuePair = {};
@@ -294,8 +301,9 @@ wss.on('connection', (ws,req) => {
                         keyValuePair.clientIP = clientIpAddress;
                         const ChargerValue = JSON.stringify(keyValuePair);
                         SaveChargerValue(ChargerValue);
+                        updateTime(uniqueIdentifier);
                     } else if (requestType === 2 && requestName === "StopTransaction") {
-                        const response = [3, uniqueIdentifier, {}];
+                        const response = [3, Identifier, {}];
                         ws.send(JSON.stringify(response));
                     }
                 }
@@ -355,7 +363,6 @@ async function shouldUpgradeForDevice(uniqueIdentifier) {
         return false; // Default to disallowing the upgrade in case of an error
     }
 }
-
 
 function SaveChargerStatus(chargerStatus) {
 
@@ -442,6 +449,23 @@ function SaveChargerValue(ChargerVal) {
         }
     })
 
+}
+
+async function updateTime(Device_ID){
+
+    const db = client.db(dbName);
+    const collection = db.collection('ev_charger_status');
+
+    const filter = { chargerID: Device_ID };
+    const update = { $set: { timestamp: new Date() } };
+
+    const result = await collection.updateOne(filter, update);
+
+    if (result.modifiedCount === 1) {
+        console.log(`Successfully updated time for charger with ID ${Device_ID}`);
+    } else {
+        console.log(`Charger with ID ${Device_ID} not found`);
+    }
 }
 
 server.listen(8050, () => {
