@@ -1,221 +1,604 @@
-<!DOCTYPE html>
-    <html>
+<!doctype html>
+<html class="no-js" lang="en">
 
-    <head>
-        <title>Start Transaction</title>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <title>Outdid EV Charger</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- favicon
+		============================================ -->
+    <link rel="shortcut icon" type="image/x-icon" href="img/favicon.png">
+    <!-- Google Fonts
+		============================================ -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,700,900" rel="stylesheet">
+    <!-- Bootstrap CSS
+		============================================ -->
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <!-- Bootstrap CSS
+		============================================ -->
+    <link rel="stylesheet" href="css/font-awesome.min.css">
+	<!-- nalika Icon CSS
+		============================================ -->
+    <link rel="stylesheet" href="css/nalika-icon.css">
+    <!-- owl.carousel CSS
+		============================================ -->
+    <link rel="stylesheet" href="css/owl.carousel.css">
+    <link rel="stylesheet" href="css/owl.theme.css">
+    <link rel="stylesheet" href="css/owl.transitions.css">
+    <!-- animate CSS
+		============================================ -->
+    <link rel="stylesheet" href="css/animate.css">
+    <!-- normalize CSS
+		============================================ -->
+    <link rel="stylesheet" href="css/normalize.css">
+    <!-- meanmenu icon CSS
+		============================================ -->
+    <link rel="stylesheet" href="css/meanmenu.min.css">
+    <!-- main CSS
+		============================================ -->
+    <link rel="stylesheet" href="css/main.css">
+    <!-- morrisjs CSS
+		============================================ -->
+    <link rel="stylesheet" href="css/morrisjs/morris.css">
+    <!-- mCustomScrollbar CSS
+		============================================ -->
+    <link rel="stylesheet" href="css/scrollbar/jquery.mCustomScrollbar.min.css">
+    <!-- metisMenu CSS
+		============================================ -->
+    <link rel="stylesheet" href="css/metisMenu/metisMenu.min.css">
+    <link rel="stylesheet" href="css/metisMenu/metisMenu-vertical.css">
+    <!-- calendar CSS
+		============================================ -->
+    <link rel="stylesheet" href="css/calendar/fullcalendar.min.css">
+    <link rel="stylesheet" href="css/calendar/fullcalendar.print.min.css">
+    <!-- style CSS
+		============================================ -->
+    <link rel="stylesheet" href="style.css">
+    <!-- responsive CSS
+		============================================ -->
+    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="">
+    <!-- Include jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
+    <!-- Include ScrollUp plugin -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/scrollup/2.4.1/jquery.scrollUp.min.js"></script>
+    <!-- Include jQuery from a different CDN -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
             integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
             crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    </head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/wow/1.1.2/wow.min.js"></script>
+
+    <!-- modernizr JS
+		============================================ -->
+    <script src="js/vendor/modernizr-2.8.3.min.js"></script>
     <style>
-      table {
-        font-family: arial, sans-serif;
-        border-collapse: collapse;
-        width: 100%;
-      }
-     
-      td, th {
-        border: 1px solid #dddddd;
-        text-align: left;
-        padding: 8px;
-      }
-     
-      tr:nth-child(even) {
-        background-color: #dddddd;
-      }
-      </style>
+        table, th, td {
+            border: 2px solid black;
+        }
+        .danger {
+          background-color: #ffdddd;
+          border-left: 6px solid #f44336;
+          border-radius: 10px;
+        }
+        .border {
+            border-radius: 10px;
+        }
+   
+        #container {
+            width: 50%;
+            aspect-ratio: 5/2;
+            margin: auto;
+            border: solid black 2px;
+            overflow-x: hidden;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            background-color:#ffffff;
+        }
+        .table-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        table {
+            border-collapse: collapse;
+            border-spacing: 0;
+            width: 100%;
+            border: 1px solid #ddd;
+            overflow-y: auto;
+       
+        }
+        th, td {
+            width: 25%;
+            text-align: left;
+            padding: 8px;
+        }
 
-    <body>
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        @media only screen and (max-width: 500px){
+            #container {
+                width: 100%;
+                aspect-ratio: 16/9;
+            }
+            table {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
 
-        <h2>ENTER CHARGER ID</h2><input type="text" id="chargerID">
-        <button id="chargerSUBMIT">GET INFO</button></br></br>
+<body>
+    <div class="left-sidebar-pro">
+        <nav id="sidebar" class="">
+            <div class="sidebar-header">
+                <h3 style="color: white; padding-top: 10px;"> 
+                <a href="" style="color: white;">Outdid <span style="color:greenyellow;">EV</span> Charger</a></h3>
+            </div>
+            <div class="left-custom-menu-adp-wrap comment-scrollbar" style="padding-top:30px;">
+                <nav class="sidebar-nav left-sidebar-menu-pro">
+                    <ul class="metismenu" id="menu1">
+                        <li class="active">
+                            <a href="">
+								<i class="icon nalika-home icon-wrap"></i>
+								<span class="mini-click-non">Dashboard</span>
+							</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </nav>
+    </div>
+    <!-- Start Welcome area -->
+    <div class="all-content-wrapper">
+            <div class="header-advance-area">
+                <div class="header-top-area">
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                <div class="header-top-wraper">
+                                    <div class="row">
+                                        <div class="col-lg-1 col-md-0 col-sm-1 col-xs-12">
+                                            <div class="menu-switcher-pro">
+                                                <button type="button" id="sidebarCollapse" class="btn bar-button-pro header-drl-controller-btn btn-info navbar-btn">
+                                                        <i class="icon nalika-menu-task"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Mobile Menu start -->
+                <div class="mobile-menu-area">
+                    <div class="container">
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                <div class="mobile-menu">
+                                    <nav id="dropdown">
+                                        <ul class="mobile-menu-nav">
+                                            <li><a data-toggle="collapse" data-target="#Charts" href="#">Home <span class="admin-project-icon nalika-icon nalika-down-arrow"></span></a>
+                                                <ul class="collapse dropdown-header-top">
+                                                    <li><a href="">Dashboard</a></li>
+                                                </ul>
+                                            </li>
+                                        </ul>
+                                    </nav>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Mobile Menu end -->
+                <div class="breadcome-area">
+                    <div class="container-fluid">
+                        <div class="row" style="margin-top:50px;">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                <div class="breadcome-list">
+                                    <div class="row">
+                                        <div>
+                                            <div class="breadcomb-report">
+                                                <h3 style="text-align:center; margin: 0; color: greenyellow;">CHARGER STATUS</h3><br>
+                                                <strong style="text-align:center; margin: 0; color: white;"><h4 id="currentstatus"></h4><h4 id="timestamp"></h4></strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                           
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12" style="padding-bottom: 30px;">
+                                <div class="admin-content analysis-progrebar-ctn res-mg-t-15" style="margin: auto; width: 60%; padding: 10px; padding-bottom: px;">
+                                    <h3 style=" margin: auto; width: 100%; padding: 10px;">
+                                        <input type="text" id="chargerID" style="width: 100%; text-align: center;" readonly>
+                                    </h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="section-admin container-fluid">
+                <div class="row admin text-center">
+                    <div class="col-md-12">
+                        <div class="row">
+                            <div class="col-lg-4 col-md-4 col-sm-4 col-xs-12">
+                                <div class="admin-content analysis-progrebar-ctn res-mg-t-30">
+                                    <div class="row vertical-center-box vertical-center-box-tablet">
+                                        <div class="col-xs-7 mar-bot-15 text-left">
+                                            <h4 class="text-left" id="Charger" style="color: goldenrod;"><b>Voltage</b></h4>
+                                        </div>
+                                        <div class="col-xs-1 cus-gh-hd-pro">
+                                            <h4 id="voltage" style="color: white;"></h4>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 col-md-4 col-sm-4 col-xs-12">
+                                <div class="admin-content analysis-progrebar-ctn res-mg-t-30">
+                                    <div class="row vertical-center-box vertical-center-box-tablet">
+                                        <div class="col-xs-7 mar-bot-15 text-left">
+                                            <h4 class="text-left" id="Charger" style="color: goldenrod;"><b >Current</b></h4>
+                                        </div>
+                                        <div class="col-xs-1 cus-gh-hd-pro">
+                                            <h4 id="current" style="color: white;"></h4>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 col-md-4 col-sm-4 col-xs-12" style="margin-bottom:1px;">
+                                <div class="admin-content analysis-progrebar-ctn res-mg-t-30">
+                                    <div class="row vertical-center-box vertical-center-box-tablet">
+                                        <div class="col-xs-7 mar-bot-15 text-left">
+                                            <h4 class="text-left" id="Charger" style="color: goldenrod;"><b>Power</b></h4>
+                                        </div>
+                                        <div class="col-xs-1 cus-gh-hd-pro">
+                                            <h4 id="power" style="color: white;"></h4>                                        
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row" style="margin-top: 50px;">
+                            <div class="col-lg-4 col-md-4 col-sm-4 col-xs-12" style="margin-bottom:1px;">
+                                <div class="admin-content analysis-progrebar-ctn res-mg-t-30">
+                                    <div class="row vertical-center-box vertical-center-box-tablet">
+                                        <div class="col-xs-7 mar-bot-15 text-left">
+                                            <h4 class="text-left" style="color: goldenrod;"><b>Energy</b></h4>
+                                        </div>
+                                        <div class="col-xs-1 cus-gh-hd-pro">
+                                            <h4 id="energy" style="color: white;"></h4>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 col-md-4 col-sm-4 col-xs-12">
+                                <div class="admin-content analysis-progrebar-ctn res-mg-t-30">
+                                    <div class="row vertical-center-box vertical-center-box-tablet">
+                                        <div class="col-xs-7 mar-bot-15 text-left">
+                                            <h4 class="text-left" id="Charger" style="color: goldenrod;"><b>Frequency</b></h4>
+                                        </div>
+                                        <div class="col-xs-1 cus-gh-hd-pro">
+                                            <h4 id="frequency" style="color: white;"></h4>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 col-md-4 col-sm-4 col-xs-12">
+                                <div class="admin-content analysis-progrebar-ctn res-mg-t-30">
+                                    <div class="row vertical-center-box vertical-center-box-tablet">
+                                        <div class="col-xs-7 mar-bot-15 text-left">
+                                            <h4 class="text-left" id="Charger" style="color: goldenrod;"><b >Temperature</b></h4>
+                                        </div>
+                                        <div class="col-xs-1 cus-gh-hd-pro">
+                                            <h4 id="temperature" style="color: white;"></h4>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row" style="margin-top: 50px;" id="actionBtn">
+                            <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                                <div class="admin-content analysis-progrebar-ctn res-mg-t-15">
+                                    <h3><button class="btn btn-sm" id="startTransactionBtn" style="background-color: green; color:white;     padding: 12px 70px;
+                                        font-size: 25px; line-height: 1.5;border-radius: 3px;">START</button></h3>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                                <div class="admin-content analysis-progrebar-ctn res-mg-t-15">
+                                    <h3><button class="btn btn-sm btn-primary" id="stopTransactionBtn" style="background-color: red; color:white;     padding: 12px 70px;
+                                        font-size: 25px; line-height: 1.5; border-radius: 3px;" >STOP</button></h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-        <div id="actionBtn" style="width: 100%;">
-          <button id="startTransactionBtn">Start Transaction</button>
-          <button id="stopTransactionBtn">Stop Transaction</button>
-          <h3>CHARGER STATUS: <p id="currentstatus"></p></h3>
-        </div></br>
+            <div style="text-align: center; margin-top:50px;" id="GetinButton">
+                <h3><button class="btn btn-sm" id="btn_error" onclick="toggleTable()" style="background-color: rgb(0, 64, 128); color:white; padding: 12px 70px;
+                    font-size: 25px; line-height: 1.5;border-radius:20px; margin-bottom: 10px;">Show Error History</button></h3>
+            </div>
+            <div id="myTable" style="display: none; padding-bottom: 30px;">
+                        <div id="container">
+                            <table>
+                                <thead>
+                                    <tr style="font-size: 20px;">
+                                        <th>Sl.No</th>
+                                        <th>Timestamp</th>
+                                        <th>Status</th>
+                                        <th>Error</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="errorhistory">                                    
+                                                                       
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
 
-        <table id="ChargerValue">
-          <tr>
-            <th>Voltage</th>
-            <th>Current</th>
-            <th>Power</th>
-            <th>Energy</th>
-            <th>Frequency</th>
-            <th>Temperature</th>
-          </tr>
-          <tr>
-            <td id="voltage"></td>
-            <td id="current"></td>
-            <td id="power"></td>
-            <td id="energy"></td>
-            <td id="frequency"></td>
-            <td id="temperature"></td>
-          </tr>
-        </table>
+            <div style="padding: 4px 12px; padding-top:20px;">
+                <h2 style="color:aliceblue;">Note:</h2>
+                <div class="danger" style="padding-left: 10px; padding-bottom:5px;">
+                    <h4 style="padding-top:20px;"><u>Threshold Level</u></h4>
+                    <p><strong>Voltage level : </strong> Input under voltage - 175V and below.  &nbsp;&nbsp;&nbsp;Input over voltage - 270V and above.</p>
+                    <p><strong>Current :</strong> Over Current - 33A.</p>
+                    <p><strong>Frequency :</strong>  Under frequency - 47HZ. &nbsp;&nbsp;&nbsp;Over frequency - 53HZ.</p>
+                    <p><strong>Temperature :</strong> Low Temperature - 0 &deg;C. &nbsp;&nbsp;&nbsp; High  Temperature - 58 &deg;C.</p>
+                </div>
+            </div>
+           
+        
+        <div class="footer-copyright-area" style="margin-top:5%;">
+            <div class="container-fluid" style="padding-top:11px; padding-bottom:11px;">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <div class="footer-copy-right">
+                            <p>Copyright © 2023 <a href="https://www.outdidtech.com/" target="_blank">Outdid Tech</a> All rights reserved.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- jquery
+		============================================ -->
+    <script src="js/vendor/jquery-1.12.4.min.js"></script>
+    <!-- bootstrap JS
+		============================================ -->
+    <script src="js/bootstrap.min.js"></script>
+   
+    <!-- price-slider JS
+		============================================ -->
+    <script src="js/jquery-price-slider.js"></script>
+    <!-- meanmenu JS
+		============================================ -->
+    <script src="js/jquery.meanmenu.js"></script>
+    <!-- owl.carousel JS
+		============================================ -->
+    <script src="js/owl.carousel.min.js"></script>
+    <!-- sticky JS
+		============================================ -->
+    <script src="js/jquery.sticky.js"></script>
+   
+    <!-- plugins JS
+		============================================ -->
+    <script src="js/plugins.js"></script>
+    <!-- main JS
+		============================================ -->
+    <script src="./js/main.js"></script>
+</body>
 
-    </body>
-
-    </html>
-
+</html>
 <script>
 
-var chargerURL = '';
-var isChargerAvailabe = '';
-let intervalId;
+    var chargerURL = '';
+    var isChargerAvailabe = '';
+    let intervalId;
+    var serialNumber = 1;
 
-$(document).ready(function () {
-    $('#actionBtn').hide();
-    $('#ChargerValue').hide();
-});
-
-$('#chargerSUBMIT').click(function () {
-  fetchData(function(result) {
-    if (result) {
-      $('#actionBtn').show();
-      $('#ChargerValue').show();
-    } else {
-      $('#actionBtn').hide();
-      $('#ChargerValue').hide();
-    }
-  });
-  isChargerAvailabe = true;
-  CallInterval(isChargerAvailabe);
-});
-
-function CallInterval(isChargerAvailabe){
-  if(isChargerAvailabe == true){
-    var interval = 1000; // 1 seconds
-    intervalId = setInterval(getChargerDetails, interval);
-  }else{
-    console.log('setInterval is not working !');
-  }
-}
-
-function fetchData(callback) {
-    getChargerDetails(function(result) {
-      if(result){
-        if (callback) {
-          callback(true);
-        }
-      }
+    
+    // Get the URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // Get the value of the 'id' parameter
+    const idValue = urlParams.get('id');
+    
+    $(document).ready(function () {
+        
+        var textBox = document.getElementById('chargerID');
+    
+        var appendedValue = idValue;
+        textBox.value += appendedValue;
+    
+      isChargerAvailabe = true;
+      CallInterval(isChargerAvailabe);
+            
     });
-}
+    
+    function CallInterval(isChargerAvailabe){
+      if(isChargerAvailabe == true){
+        var interval = 1000; // 1 seconds
+        intervalId = setInterval(getChargerDetails, interval);
+      }else{
+        console.log('setInterval is not working !');
+      }
+    }
+    
+    function fetchData(callback) {
+        getChargerDetails(function(result) {
+          if(result){
+            if (callback) {
+              callback(true);
+            }
+          }
+        });
+    }
 
-function getChargerDetails(callback){
-  var chargerID = $('#chargerID').val();
-  $.ajax({
-        type: 'GET',
-        data: { chargerID: chargerID },
-        url: '/checkDeviceID',
-        success: function (response) {
-            $('#currentstatus').empty();
-            $('#voltage, #current, #power, #energy, #frequency, #temperature').empty();
+    function getChargerDetails(callback){
+      var chargerID = $('#chargerID').val();
+      $.ajax({
+            type: 'GET',
+            data: { chargerID: chargerID },
+            url: '/checkDeviceID',
+            success: function (response) {
+    
+                $('#currentstatus').empty();
+                $('#timestamp').empty();
+                $('#voltage, #current, #power, #energy, #frequency, #temperature').empty();
 
-            if (response == 'DeviceNotAvailable') {
-              if($('#chargerID').val().trim() !== ''){
-                console.log('ChargerNotAvailable');
-              }               
-                $('#actionBtn').hide();
-                $('#ChargerValue').hide();
-                clearInterval(intervalId);
-            } else {
-                chargerURL = chargerID;
+                if (response == 'DeviceNotAvailable') {
+                  if($('#chargerID').val().trim() !== ''){
+                    console.log('ChargerNotAddedInDatabase');
+                    $("#currentstatus").append('ChargerNotAddedInDatabase');
+                  }               
+                    clearInterval(intervalId);
+                } else {
+                    chargerURL = chargerID;
+    
+                    if(response.statusData[0]){
+    
+                    var status = response.statusData[0].status;
+                    var errorCode = response.statusData[0].errorCode;
+                    const timestamp = formatTimestamp(response.statusData[0].timestamp);
 
-                var status = response.statusData[0].status;
-                const timestamp = formatTimestamp(response.statusData[0].timestamp);
+                    var errorhistory = '';
+                    if(status == 'Faulted'){
 
-                $('#currentstatus').append(status + ' - ' + timestamp);
+                        errorhistory = '<tr>'+
+                                        '<td>'+serialNumber+'</td>'+
+                                        '<td>'+timestamp+'</td>'+
+                                        '<td>'+status+'</td>'+
+                                        '<td>'+errorCode+'</td>'+
+                                        '</tr> ';
+                                    
+                        $('#errorhistory').append(errorhistory);
+                        serialNumber++;
+                    }
+    
+                    $('#currentstatus').append(status);
+                    $('#timestamp').append(timestamp);
 
-                var voltage = response.valueData['Voltage'];
-                var current = response.valueData['Current.Import'];
-                var power = response.valueData['Power.Active.Import'];
-                var energy = response.valueData['Energy.Active.Import.Register'];
-                var frequency = response.valueData['Frequency'];
-                var powerfactor = response.valueData['Power.Factor'];
+                    var myButton = document.getElementById("startTransactionBtn");
 
-                $('#voltage').append(voltage);
-                $('#current').append(current);
-                $('#power').append(power);
-                $('#energy').append(energy);
-                $('#frequency').append(frequency);
-                $('#temperature').append(powerfactor);
-
+                    // Check if the button is currently disabled
+                    if (status == 'Finishing' || status == 'Charging' || status == 'Access Granted' || status == 'Action Initiated') {
+                        myButton.disabled = true;
+                    } else {
+                        myButton.disabled = false;
+                    }
+    
+                    var voltage = response.valueData['Voltage'];
+                    var current = response.valueData['Current.Import'];
+                    var power = response.valueData['Power.Active.Import'];
+                    var energy = response.valueData['Energy.Active.Import.Register'];
+                    var frequency = response.valueData['Frequency'];
+                    var powerfactor = response.valueData['Temperature'];
+    
+                    console.log("ChargerID: "+ chargerID +" - "+"Status: "+ status + " - "+ "Error: "+ errorCode);
+    
+                    $('#voltage').append(voltage);
+                    $('#current').append(current);
+                    $('#power').append(power);
+                    $('#energy').append(energy);
+                    $('#frequency').append(frequency);
+                    $('#temperature').append(powerfactor);
+    
+                    if (callback) {
+                      callback(true);
+                    }
+                  }else{
+                    console.log("Charger is Added in the database but No Value Received Yet !");
+                  }
+                }
+           
+            },
+            error: function (response) {
+                console.log(response);
+               
                 if (callback) {
-                  callback(true);
+                    callback(false);
                 }
             }
-       
-        },
-        error: function (response) {
-            console.log(response);
-           
-            if (callback) {
-                callback(false);
-            }
-        }
-    });
-}
-
-// Event listener to check the text box value and start/stop the interval
-document.getElementById('chargerID').addEventListener('input', function() {
-    const textBoxValue = this.value;
-
-    if (textBoxValue.trim() === '') {
-        // If the text box is empty, stop the interval
-        clearInterval(intervalId);
+        });
     }
-});
-
-function formatTimestamp(originalTimestamp) {
-
-    const date = new Date(originalTimestamp);
-
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-
-    const formattedDate = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
-
-    return formattedDate;
-}
-
-const startTransactionBtn = document.getElementById('startTransactionBtn');
-startTransactionBtn.addEventListener('click', function () {
-    $.ajax({
-        type: 'GET',
-        url: '/start',
-        data: { id: chargerURL },
-        success: function (data, textStatus, jqXHR) {
-            if (jqXHR.status === 200) {
-                console.log("OK - ChargerStartInitiated");
-            }
-        },
-        error: function(error){
-          console.log("ChargerNotStarted - " + error);
+    
+    // Event listener to check the text box value and start/stop the interval
+    document.getElementById('chargerID').addEventListener('input', function() {
+        const textBoxValue = this.value;
+    
+        if (textBoxValue.trim() === '') {
+            // If the text box is empty, stop the interval
+            clearInterval(intervalId);
         }
     });
-});
-
-const stopTransactionBtn = document.getElementById('stopTransactionBtn');
-stopTransactionBtn.addEventListener('click', function () {
-    $.ajax({
-        type: 'GET',
-        url: '/stop',
-        data: { id: chargerURL },
-        success: function (data, textStatus, jqXHR) {
-            if (jqXHR.status === 200) {
-                console.log("OK - ChargerStopInitiated");
+    
+    function formatTimestamp(originalTimestamp) {
+    
+        const date = new Date(originalTimestamp);
+    
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+    
+        const formattedDate = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+    
+        return formattedDate;
+    }
+    
+    const startTransactionBtn = document.getElementById('startTransactionBtn');
+    startTransactionBtn.addEventListener('click', function () {
+        $.ajax({
+            type: 'GET',
+            url: '/start',
+            data: { id: chargerURL },
+            success: function (data, textStatus, jqXHR) {
+                if (jqXHR.status === 200) {
+                    console.log("ChargerStartInitiated");
+                }
+            },
+            error: function(error){
+              console.log("ChargerNotStarted - " + error);
             }
-        },
-        error: function(error){
-          console.log("ChargerNotStopped - " +error);
-        }
+        });
     });
-});
+    
+    const stopTransactionBtn = document.getElementById('stopTransactionBtn');
+    stopTransactionBtn.addEventListener('click', function () {
+        $.ajax({
+            type: 'GET',
+            url: '/stop',
+            data: { id: chargerURL },
+            success: function (data, textStatus, jqXHR) {
+                if (jqXHR.status === 200) {
+                    console.log("ChargerStopInitiated");
+                }
+            },
+            error: function(error){
+              console.log("ChargerNotStopped - " +error);
+            }
+        });
+    });
 
-</script>
+    function toggleTable() {
+    var table = document.getElementById("myTable");
+    var btn = document.getElementById("btn_error");
+        if (table.style.display === "none") {
+            table.style.display = "block";
+            btn.textContent = "Hide Error History";
+        } else {
+            table.style.display = "none";
+            btn.textContent = "Show Error History";
+        }
+    }
+    
+    </script>
