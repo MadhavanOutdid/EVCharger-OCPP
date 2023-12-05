@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>OCPP Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+
+<body>
+    <div class="container">
+        <div class="row">
+            <div>
+                <table class="table table-striped table-dark">
+
+                    <tbody>
+                        <tr>
+                            <td width="20%">
+                                <div style="margin-bottom: 22px;text-align: center;">
+                                    <label>Commands</label>
+                                </div>
+                                <hr>
+                                <div class="btn-group-vertical w-200" id="commandsbuttons"></div>
+                            </td>
+
+                            <td>
+                                <div style="margin-bottom: 10px;text-align: center;">
+                                    <label>Charger Id: </label>
+                                    <input style="width: 100px" type="text" id="chargerId" placeholder="Enter Charger Id" fdprocessedid="p6l60e">
+                                    <label id="heartbeat" style="background: greenyellow; color:black; padding-left: 5px; padding-right: 5px;"> </label>
+                                    <label id="meter" style="background: rgb(123, 124, 122); color:black; padding-left: 5px; padding-right: 5px;"> </label>
+                                </div>
+
+                                <hr>
+
+                                <div style="margin-bottom: 10px;">
+                                    <label>Command :</label>
+                                    <span id="action" style="margin-right:10px">No Command Selected</span>
+                                    <button onclick="onSendCOmmand()" class="btn btn-primary" fdprocessedid="u30y3n">
+                                        Send
+                                    </button>
+                                </div>
+
+                                <div>
+
+                                    <textarea rows="8" cols="50" id="payload" placeholder="payload"></textarea>
+                                </div>
+
+
+
+                                <div>
+                                    <textarea rows="8" cols="50" id="response" placeholder="Command response"></textarea>
+                                </div>
+
+                                <div>
+                                    <textarea rows="8" cols="50" id="chargerCall" placeholder="Charger Call"></textarea>
+                                </div>
+                            </td>
+
+                            <td>
+
+                                <div>
+                                    <div style="margin-bottom: 22px;text-align: center;">
+                                        <label>Remarks</label>
+                                    </div>
+
+                                    <hr>
+                                    <textarea rows="15" cols="50" id="remarks" placeholder="No remarks on payload available"></textarea>
+                                </div>
+                            </td>
+
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(document).ready(function() {
+            console.log("ready!");
+            GetAction_Payload();
+        });
+
+        var arrCommandsLibrary = [];
+
+        function GetAction_Payload() {
+            $.ajax({
+                type: 'GET',
+                url: '/GetAction',
+                success: function(response) {
+
+                    arrCommandsLibrary = response;
+
+                    let strCommandsButtonsHtml = ""
+                    for (let i = 0; i < arrCommandsLibrary.length; i++) {
+                        let joCommand = arrCommandsLibrary[i]
+                        strCommandsButtonsHtml += `<button type="button" class="btn btn-light w-30" onclick="onCommandClick(${i})">${joCommand.action}</button>`
+                    }
+
+                    $('div#commandsbuttons').html(strCommandsButtonsHtml)
+                },
+                error: function(error) {
+                    console.log("Error - " + error);
+                }
+            });
+        }
+
+        function onCommandClick(index) {
+            let joCommand = arrCommandsLibrary[index]
+
+            if (joCommand.remarks !== undefined) {
+                $('textarea#remarks').text(joCommand.remarks)
+            } else {
+                $('textarea#remarks').text("")
+            }
+
+            $('span#action').text(joCommand.action)
+            $("#payload").val(JSON.stringify(joCommand.payload, null, "  "));
+            $("#response").val("")
+            $("#chargerCall").text("")
+
+        }
+
+        function onSendCOmmand() {
+            let strChargerId = $('input#chargerId').val()
+            $("#response").val("")
+            if (strChargerId.length > 0) {
+
+                let strPayload = $('textarea#payload').val()
+                let joCommand = {
+                    time: Date.now(),
+                    action: $('span#action').text(),
+                }
+                if (strPayload.length > 0) {
+                    try {
+                        joCommand.payload = JSON.parse(strPayload)
+                        sendRequest(strChargerId, strPayload, joCommand.action);
+                    } catch (e) {
+                        alert("Please enter valid payload format")
+                    }
+                }
+            } else {
+                alert("Enter valid charger id")
+            }
+        }
+
+        function sendRequest(ChargerID, payload, action) {
+            console.log(action, '- Request sent - ', ChargerID);
+            $.ajax({
+                type: 'GET',
+                url: '/SendOCPPRequest',
+                data: {
+                    id: ChargerID,
+                    req: payload,
+                    actionBtn: action
+                },
+                success: function(response) {
+                    $("#response").val(JSON.stringify(response, null, "  "));
+                },
+                error: function(xhr, status, error) {
+                    // Print the error message to the console
+                    console.log('Error:', error);
+
+                    // You can also handle the error and display a message to the user if needed
+                    if (xhr.status === 404) {
+                        // Handle 404 Not Found error
+                        alert('Device not found');
+                    } else {
+                        // Handle other errors
+                        alert('An error occurred');
+                    }
+                }
+            });
+        }
+    </script>
+    <div id="inspect-element-top-layer" popover="auto" data-inspect-element="inspectElement" style="pointer-events: none; border: unset; padding: 0px;"></div>
+</body>
+
+</html>
+</body>
+
+</html>
